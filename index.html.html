@@ -1,0 +1,52 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>AMC Manager</title><style>
+:root{--bg:#f4f6f8;--cd:#fff;--tx:#1b2430;--mu:#6b7785;--ac:#0b6e99;--bd:#dde3ea;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12171d;--cd:#1c242d;--tx:#e8edf2;--mu:#93a0ae;--ac:#4cb5e0;--bd:#2c3743}}
+:root[data-theme="dark"]{--bg:#12171d;--cd:#1c242d;--tx:#e8edf2;--mu:#93a0ae;--ac:#4cb5e0;--bd:#2c3743}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px system-ui,sans-serif}
+header{background:var(--ac);color:#fff;padding:12px 16px}h1{margin:0;font-size:19px}
+.w{max-width:1200px;margin:auto;padding:12px}.bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+input,select,textarea{padding:9px;border:1px solid var(--bd);border-radius:8px;background:var(--cd);color:var(--tx);font:inherit;width:100%}
+.bar input{flex:1 1 220px;width:auto}.bar select{width:auto}
+button{padding:9px 14px;border:0;border-radius:8px;background:var(--ac);color:#fff;font:inherit;cursor:pointer}button.g{background:var(--bd);color:var(--tx)}button.r{background:#c0392b}
+.st{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}.st div{background:var(--cd);border:1px solid var(--bd);border-radius:8px;padding:8px 14px}.st b{font-size:20px;display:block}
+.tb{overflow-x:auto;background:var(--cd);border:1px solid var(--bd);border-radius:10px}table{border-collapse:collapse;width:100%;min-width:900px}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--bd);vertical-align:top}th{color:var(--mu);font-size:12px;position:sticky;top:0;background:var(--cd)}tr:hover td{background:var(--bg);cursor:pointer}
+.b{padding:2px 8px;border-radius:10px;font-size:12px;color:#fff;white-space:nowrap}.ok{background:#2e8b57}.wn{background:#d98a00}.ex{background:#c0392b}.na{background:#7a8794}
+.m{color:var(--mu);font-size:12px}#md{display:none;position:fixed;inset:0;background:#0008;overflow:auto;padding:12px;z-index:9}
+#bx{background:var(--cd);max-width:640px;margin:auto;border-radius:12px;padding:16px}label{display:block;margin:9px 0 3px;font-size:12px;color:var(--mu)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}.rw{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+</style></head><body><header><h1>❄️ AMC Manager 2026–27</h1><div class="m" style="color:#fff" id="sy"></div></header>
+<div class="w"><div class="st" id="st"></div>
+<div class="bar"><input id="q" placeholder="Search site, customer, contract, phone…"><select id="ft"></select><select id="fs"><option value="">All status</option><option>Active</option><option>Expiring</option><option>Expired</option><option>No dates</option></select><button onclick="ed(null)">+ Add site</button><button class="g" onclick="tl()">Import / Export</button></div>
+<div class="tb"><table><thead><tr><th>Site</th><th>Customer</th><th>Type</th><th>PPM visits</th><th>Contract</th><th>Contact</th><th>Status</th></tr></thead><tbody id="tb"></tbody></table></div></div>
+<div id="md"><div id="bx"></div></div>
+<script>
+const F=[["site","Site / Work Order"],["cust","Customer (Billing)"],["p1","PPM 1st"],["p2","PPM 2nd"],["p3","PPM 3rd"],["p4","PPM 4th"],["start","Contract Started"],["end","Contract Ended"],["no","Contract No"],["tel","Contact No"],["type","AMC Type"],["rem","Remark / Email"]];
+const $=i=>document.getElementById(i),E=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let D=[],col=null,mode="local";
+try{D=JSON.parse(localStorage.getItem("amc_w")||"[]")}catch(e){}
+const lsv=()=>{try{localStorage.setItem("amc_w",JSON.stringify(D))}catch(e){}};
+(async()=>{try{const db=await claude.use("db");if(!db)throw 0;col=db.collection("sites");mode="shared";
+col.onSnapshot(s=>{D=s.docs.map(d=>({id:d.id,...d.data()}));draw()},()=>{});}catch(e){}
+$("sy").textContent=mode=="shared"?"Shared database – all admins see the same data":"Saved on this device only";draw()})();
+function stat(d){const m=String(d.end||"").match(/(\d{1,2})[-\/ ]([A-Za-z]{3})[a-z]*[-\/ ](\d{2,4})/);if(!m)return"No dates";
+let y=+m[3];if(y<100)y+=2000;const t=new Date(m[1]+" "+m[2]+" "+y);if(isNaN(t))return"No dates";const n=(t-Date.now())/864e5;return n<0?"Expired":n<60?"Expiring":"Active"}
+const cl={Active:"ok",Expiring:"wn",Expired:"ex","No dates":"na"};
+function draw(){const q=$("q").value.toLowerCase(),t=$("ft").value,s=$("fs").value,ty=[...new Set(D.map(d=>d.type).filter(Boolean))].sort();
+$("ft").innerHTML='<option value="">All types</option>'+ty.map(x=>`<option${x==t?" selected":""}>${E(x)}</option>`).join("");
+const c={};D.forEach(d=>c[stat(d)]=(c[stat(d)]||0)+1);
+$("st").innerHTML=`<div><b>${D.length}</b>Sites</div>`+["Active","Expiring","Expired"].map(k=>`<div><b>${c[k]||0}</b>${k}</div>`).join("");
+const r=D.filter(d=>(!t||d.type==t)&&(!s||stat(d)==s)&&(!q||F.map(f=>d[f[0]]).join(" ").toLowerCase().includes(q)));
+$("tb").innerHTML=r.map(d=>{const i=D.indexOf(d),x=stat(d);return`<tr onclick="ed(${i})"><td><b>${E(d.site)}</b></td><td>${E(d.cust)}</td><td>${E(d.type)}</td><td class="m">${["p1","p2","p3","p4"].map(k=>d[k]?E(d[k]):"").filter(Boolean).join("<br>")}</td><td>${E(d.no)}<div class="m">${E(d.start)} → ${E(d.end)}</div></td><td>${E(d.tel)}<div class="m">${E(d.rem)}</div></td><td><span class="b ${cl[x]}">${x}</span></td></tr>`}).join("")||'<tr><td colspan="7" class="m">No sites yet. Use Import / Export to paste your Excel list, or Add site.</td></tr>'}
+function op(h){$("md").style.display="block";$("bx").innerHTML=h}function cx(){$("md").style.display="none"}
+function ed(i){const d=i==null?{}:D[i];op(`<h2>${i==null?"New site":"Edit site"}</h2><div class="g2">`+F.map(([k,n])=>`<div style="${k=="site"?"grid-column:1/3":""}"><label>${n}</label><input id="f_${k}" value="${E(d[k])}"></div>`).join("")+`</div><div class="rw"><button onclick="sv(${i})">Save</button><button class="g" onclick="cx()">Cancel</button>${i==null?"":`<button class="r" onclick="rm(${i})">Delete</button>`}</div>`)}
+async function put(d,i){try{if(mode=="shared"){const id=d.id||"s"+Date.now()+Math.random().toString(36).slice(2,6),o={...d};delete o.id;await col.doc(id).set(o)}else{i==null?D.unshift(d):D[i]=d;lsv();draw()}}catch(e){alert("Save failed: "+(e.message||e))}}
+async function sv(i){const d=i==null?{}:{...D[i]};F.forEach(([k])=>d[k]=$("f_"+k).value.trim());if(!d.site)return alert("Site name required");await put(d,i);cx()}
+async function rm(i){if(!confirm("Delete this site?"))return;try{if(mode=="shared")await col.doc(D[i].id).delete();else{D.splice(i,1);lsv();draw()}}catch(e){alert("Delete failed")}cx()}
+function tl(){op(`<h2>Import / Export</h2><label>Paste rows copied from Excel (columns: SL, Customer, Site, PPM 1–4, Start, End, Contract No, Contact, AMC Type, Remark)</label><textarea id="im" rows="8"></textarea><div class="rw"><button onclick="im()">Import rows</button><button class="g" onclick="ex()">Download CSV</button><button class="g" onclick="cx()">Close</button></div>`)}
+async function im(){const n=$("im").value.split("\n").map(l=>l.split("\t").map(c=>c.replace(/^"+|"+$/g,"").replace(/^'/,"").trim())).filter(c=>c.length>3&&!/^SL/i.test(c[0])&&!/^AMC LIST/i.test(c[0])).map(c=>({cust:c[1],site:c[2],p1:c[3],p2:c[4],p3:c[5],p4:c[6],start:c[7],end:c[8],no:c[9],tel:c[10],type:c[11],rem:c[12]||""})).filter(d=>d.site);
+if(!n.length)return alert("No rows recognised");if(mode=="shared"){for(const d of n)await put(d)}else{D=n.concat(D);lsv();draw()}cx();alert(n.length+" sites imported")}
+async function ex(){const q=v=>'"'+String(v||"").replace(/"/g,'""')+'"',t=F.map(f=>q(f[1])).join(",")+"\n"+D.map(d=>F.map(f=>q(d[f[0]])).join(",")).join("\n");
+try{const dl=await claude.use("downloads");if(dl){await dl.save({filename:"AMC-list.csv",data:t});return}}catch(e){}prompt("Copy CSV:",t)}
+$("q").oninput=draw;$("ft").onchange=draw;$("fs").onchange=draw;draw();
+</script></body></html>
